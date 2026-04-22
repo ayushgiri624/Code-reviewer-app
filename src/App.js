@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { auth, signInWithGoogle, logOut } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
+
+const BACKEND_URL = "https://code-reviewer-backend-liart.vercel.app";
 
 const LANGUAGES = [
   "C++", "Python", "JavaScript", "Java", "TypeScript",
@@ -136,6 +140,8 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [animateScores, setAnimateScores] = useState(false);
   const [lineCount, setLineCount] = useState(0);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     setLineCount(code.split("\n").length);
@@ -150,10 +156,48 @@ export default function App() {
     else setAnimateScores(false);
   }, [result]);
 
-  const parseResult = (text) => {
-    const scoreMatch = text.match(/SCORES?:?\s*\n([\s\S]*?)(?:\n\n|\n[A-Z])/);
-    const scores = { quality: 72, performance: 65, security: 58, readability: 70 };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+      if (currentUser) fetchHistory(currentUser.uid);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  const fetchHistory = async (userId) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/reviews/history?userId=${userId}`);
+      const data = await res.json();
+      if (data.success) {
+        setHistory(data.reviews.map(r => ({
+          id: r._id,
+          language: r.language,
+          reviewType: r.reviewType,
+          code: r.code.slice(0, 100) + "...",
+          scores: r.scores,
+          time: new Date(r.createdAt).toLocaleTimeString()
+        })));
+      }
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    }
+  };
+
+  const saveReview = async (userId, reviewData) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/reviews/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, ...reviewData }),
+      });
+    } catch (err) {
+      console.error("Failed to save review:", err);
+    }
+  };
+
+  const parseResult = (text) => {
+    const scores = { quality: 0, performance: 0, security: 0, readability: 0 };
     const qualM = text.match(/quality[:\s]+(\d+)/i);
     const perfM = text.match(/performance[:\s]+(\d+)/i);
     const secM = text.match(/security[:\s]+(\d+)/i);
@@ -162,7 +206,6 @@ export default function App() {
     if (perfM) scores.performance = parseInt(perfM[1]);
     if (secM) scores.security = parseInt(secM[1]);
     if (readM) scores.readability = parseInt(readM[1]);
-
     return { scores, fullText: text };
   };
 
@@ -278,14 +321,10 @@ ${code}
     };
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch(`${BACKEND_URL}/api/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompts[reviewType] }]
-        })
+        body: JSON.stringify({ prompt: prompts[reviewType] }),
       });
 
       const data = await response.json();
@@ -294,14 +333,27 @@ ${code}
       const parsed = parseResult(text);
       setResult(parsed);
 
-      setHistory(prev => [{
-        id: Date.now(),
+      const reviewData = {
         language,
         reviewType,
-        code: code.slice(0, 100) + "...",
+        code,
+        result: text,
         scores: parsed.scores,
-        time: new Date().toLocaleTimeString()
-      }, ...prev.slice(0, 9)]);
+      };
+
+      if (user) {
+        await saveReview(user.uid, reviewData);
+        await fetchHistory(user.uid);
+      } else {
+        setHistory(prev => [{
+          id: Date.now(),
+          language,
+          reviewType,
+          code: code.slice(0, 100) + "...",
+          scores: parsed.scores,
+          time: new Date().toLocaleTimeString()
+        }, ...prev.slice(0, 9)]);
+      }
 
     } catch (err) {
       setRawText("Error connecting to AI. Please try again.\n\n" + err.message);
@@ -365,11 +417,13 @@ ${code}
         textarea { resize: none; outline: none; }
         textarea:focus { border-color: #1e4a6e !important; box-shadow: 0 0 0 2px rgba(0,150,255,0.1); }
         pre { white-space: pre-wrap; word-break: break-word; }
+        .auth-btn { transition: all 0.2s; cursor: pointer; }
+        .auth-btn:hover { opacity: 0.85; transform: translateY(-1px); }
       `}</style>
 
       <div className="grid-bg" />
 
-      {/* Header */}
+      {/* NAVBAR */}
       <div style={{
         position: "relative", zIndex: 10,
         borderBottom: "1px solid #0f2035",
@@ -400,6 +454,7 @@ ${code}
             background: "#0a1a0a", border: "1px solid #1a4a1a",
             color: "#2ecc71", fontSize: 11, letterSpacing: "0.1em"
           }}>● LIVE</div>
+
           <button onClick={() => setShowHistory(!showHistory)} style={{
             padding: "4px 14px", borderRadius: 4,
             background: showHistory ? "#0d1f30" : "transparent",
@@ -408,23 +463,41 @@ ${code}
           }}>
             HISTORY ({history.length})
           </button>
+
+          {!authLoading && (
+            user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <img src={user.photoURL} alt="avatar" style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid #1e3a5f" }} />
+                <span style={{ fontSize: 11, color: "#8899aa" }}>{user.displayName?.split(" ")[0]}</span>
+                <button className="auth-btn" onClick={logOut} style={{
+                  padding: "4px 12px", borderRadius: 4,
+                  background: "transparent", border: "1px solid #c0392b",
+                  color: "#e74c3c", fontSize: 11, cursor: "pointer"
+                }}>LOGOUT</button>
+              </div>
+            ) : (
+              <button className="auth-btn" onClick={signInWithGoogle} style={{
+                padding: "4px 16px", borderRadius: 4,
+                background: "linear-gradient(135deg, #0066ff, #00c8ff)",
+                border: "none", color: "#fff",
+                fontSize: 11, cursor: "pointer", fontWeight: 700,
+                letterSpacing: "0.08em", fontFamily: "'JetBrains Mono', monospace"
+              }}>SIGN IN WITH GOOGLE</button>
+            )
+          )}
         </div>
       </div>
 
       <div style={{ position: "relative", zIndex: 5, display: "flex", height: "calc(100vh - 56px)" }}>
 
-        {/* Left Panel - Editor */}
+        {/* LEFT PANEL */}
         <div style={{
           width: showHistory ? "38%" : "45%",
           borderRight: "1px solid #0f2035",
           display: "flex", flexDirection: "column",
           transition: "width 0.3s ease"
         }}>
-          {/* Language selector */}
-          <div style={{
-            padding: "12px 16px", borderBottom: "1px solid #0f2035",
-            background: "#08111c"
-          }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid #0f2035", background: "#08111c" }}>
             <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 8 }}>LANGUAGE</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {LANGUAGES.map(l => (
@@ -439,11 +512,7 @@ ${code}
             </div>
           </div>
 
-          {/* Review type */}
-          <div style={{
-            padding: "12px 16px", borderBottom: "1px solid #0f2035",
-            background: "#08111c"
-          }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid #0f2035", background: "#08111c" }}>
             <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 8 }}>REVIEW TYPE</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
               {REVIEW_TYPES.map(rt => (
@@ -460,7 +529,6 @@ ${code}
             </div>
           </div>
 
-          {/* Code editor */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <div style={{
               padding: "8px 16px", background: "#08111c",
@@ -471,18 +539,16 @@ ${code}
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#e74c3c" }} />
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f1c40f" }} />
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2ecc71" }} />
-                <span style={{ fontSize: 11, color: "#3a5a7a", marginLeft: 8 }}>main.{language === "C++" ? "cpp" : language === "Python" ? "py" : language === "JavaScript" ? "js" : language.toLowerCase()}</span>
+                <span style={{ fontSize: 11, color: "#3a5a7a", marginLeft: 8 }}>main.{language === "C++" ? "cpp" : language === "Python" ? "py" : language === "JavaScript" ? "js" : language === "TypeScript" ? "ts" : language === "Ruby" ? "rb" : language.toLowerCase()}</span>
               </div>
               <span style={{ fontSize: 10, color: "#2a4a5a" }}>{lineCount} lines</span>
             </div>
 
             <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-              {/* Line numbers */}
               <div style={{
                 width: 40, background: "#07101a",
                 padding: "12px 0", overflowY: "hidden",
-                borderRight: "1px solid #0f2035",
-                flexShrink: 0
+                borderRight: "1px solid #0f2035", flexShrink: 0
               }}>
                 {code.split("\n").map((_, i) => (
                   <div key={i} style={{
@@ -492,7 +558,6 @@ ${code}
                   }}>{i + 1}</div>
                 ))}
               </div>
-
               <textarea
                 value={code}
                 onChange={e => setCode(e.target.value)}
@@ -509,8 +574,16 @@ ${code}
             </div>
           </div>
 
-          {/* Analyze button */}
           <div style={{ padding: 16, background: "#08111c", borderTop: "1px solid #0f2035" }}>
+            {!user && (
+              <div style={{
+                marginBottom: 10, padding: "8px 12px", borderRadius: 6,
+                background: "#0d1a2d", border: "1px solid #1e3a5f",
+                fontSize: 11, color: "#6a9ab0", textAlign: "center"
+              }}>
+                Sign in to save your review history permanently
+              </div>
+            )}
             <button
               className="glow-btn"
               onClick={handleReview}
@@ -526,36 +599,23 @@ ${code}
               }}
             >
               {loading ? (
-                <>
-                  <span className="spin" style={{ display: "inline-block" }}>⟳</span>
-                  ANALYZING...
-                </>
+                <><span className="spin" style={{ display: "inline-block" }}>⟳</span>ANALYZING...</>
               ) : "▶ RUN ANALYSIS"}
             </button>
           </div>
         </div>
 
-        {/* Right Panel - Results */}
+        {/* RIGHT PANEL */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {!result && !loading && (
             <div style={{
               flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 16,
-              color: "#1e3a5f"
+              alignItems: "center", justifyContent: "center", gap: 16, color: "#1e3a5f"
             }}>
               <div style={{ fontSize: 48 }}>⚡</div>
               <div style={{ fontSize: 14, letterSpacing: "0.1em", color: "#2a4a6a" }}>READY TO ANALYZE</div>
               <div style={{ fontSize: 11, color: "#1a2a3a", maxWidth: 240, textAlign: "center", lineHeight: 1.6 }}>
                 Select your language, choose review type, and click Run Analysis
-              </div>
-              <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
-                {["BUGS", "PERF", "SEC", "QUALITY"].map(t => (
-                  <div key={t} style={{
-                    padding: "6px 12px", borderRadius: 4,
-                    border: "1px solid #0f2035", fontSize: 10,
-                    color: "#1e3a5f", letterSpacing: "0.1em"
-                  }}>{t}</div>
-                ))}
               </div>
             </div>
           )}
@@ -566,42 +626,20 @@ ${code}
               alignItems: "center", justifyContent: "center", gap: 20
             }}>
               <div style={{ position: "relative", width: 80, height: 80 }}>
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "2px solid #0f2035" }} />
                 <div style={{
                   position: "absolute", inset: 0, borderRadius: "50%",
-                  border: "2px solid #0f2035"
-                }} />
-                <div style={{
-                  position: "absolute", inset: 0, borderRadius: "50%",
-                  border: "2px solid transparent",
-                  borderTopColor: "#00c8ff",
+                  border: "2px solid transparent", borderTopColor: "#00c8ff",
                   animation: "spin 1s linear infinite"
                 }} />
-                <div style={{
-                  position: "absolute", inset: 8, borderRadius: "50%",
-                  border: "2px solid transparent",
-                  borderTopColor: "#0066ff",
-                  animation: "spin 0.7s linear infinite reverse"
-                }} />
-                <div style={{
-                  position: "absolute", inset: 0, display: "flex",
-                  alignItems: "center", justifyContent: "center",
-                  fontSize: 20
-                }}>⚡</div>
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>⚡</div>
               </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 13, color: "#00c8ff", letterSpacing: "0.1em" }} className="pulse">
-                  ANALYZER IS ANALYZING...
-                </div>
-                <div style={{ fontSize: 11, color: "#2a4a6a", marginTop: 6 }}>
-                  Scanning for {reviewType === "bugs" ? "bugs" : reviewType === "security" ? "vulnerabilities" : reviewType === "optimize" ? "optimizations" : "issues"}...
-                </div>
-              </div>
+              <div style={{ fontSize: 13, color: "#00c8ff", letterSpacing: "0.1em" }} className="pulse">ANALYZING...</div>
             </div>
           )}
 
           {result && !loading && (
             <div className="fade-in" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              {/* Score bar */}
               <div style={{
                 padding: "16px 24px", background: "#08111c",
                 borderBottom: "1px solid #0f2035",
@@ -617,12 +655,7 @@ ${code}
                 </div>
               </div>
 
-              {/* Tabs */}
-              <div style={{
-                display: "flex", gap: 0,
-                borderBottom: "1px solid #0f2035",
-                background: "#07101a"
-              }}>
+              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #0f2035", background: "#07101a" }}>
                 {[
                   { id: "review", label: "REVIEW" },
                   { id: "fixed", label: "FIXED CODE" },
@@ -634,40 +667,22 @@ ${code}
                     color: activeTab === tab.id ? "#00c8ff" : "#3a5a7a",
                     fontSize: 11, cursor: "pointer", letterSpacing: "0.12em",
                     fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
-                    transition: "all 0.2s"
                   }}>{tab.label}</button>
                 ))}
               </div>
 
-              {/* Tab content */}
               <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
                 {activeTab === "review" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                    {/* Summary */}
-                    <div style={{
-                      padding: 16, borderRadius: 8,
-                      background: "#08111c", border: "1px solid #0f2035"
-                    }}>
-                      <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>
-                        SUMMARY
-                      </div>
+                    <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
+                      <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>SUMMARY</div>
                       <div style={{ fontSize: 13, color: "#a8c8e8", lineHeight: 1.7 }}>
                         <TypewriterText text={extractSection(rawText, "summary")} speed={6} />
                       </div>
                     </div>
-
-                    {/* Issues */}
-                    <div style={{
-                      padding: 16, borderRadius: 8,
-                      background: "#08111c", border: "1px solid #0f2035"
-                    }}>
-                      <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>
-                        ISSUES & RECOMMENDATIONS
-                      </div>
-                      <pre style={{
-                        fontSize: 12, color: "#8899aa", lineHeight: 1.8,
-                        fontFamily: "'JetBrains Mono', monospace"
-                      }}>
+                    <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
+                      <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>ISSUES & RECOMMENDATIONS</div>
+                      <pre style={{ fontSize: 12, color: "#8899aa", lineHeight: 1.8, fontFamily: "'JetBrains Mono', monospace" }}>
                         {extractSection(rawText, "issues") || "No specific issues section found. See raw output."}
                       </pre>
                     </div>
@@ -675,10 +690,7 @@ ${code}
                 )}
 
                 {activeTab === "fixed" && (
-                  <div style={{
-                    borderRadius: 8, overflow: "hidden",
-                    border: "1px solid #0f2035"
-                  }}>
+                  <div style={{ borderRadius: 8, overflow: "hidden", border: "1px solid #0f2035" }}>
                     <div style={{
                       padding: "10px 16px", background: "#08111c",
                       borderBottom: "1px solid #0f2035",
@@ -686,12 +698,18 @@ ${code}
                     }}>
                       <span style={{ fontSize: 11, color: "#2ecc71", letterSpacing: "0.1em" }}>✓ IMPROVED CODE</span>
                       <span style={{ fontSize: 10, color: "#3a5a7a", marginLeft: "auto" }}>{language}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(extractSection(rawText, "fixed"))}
+                        style={{
+                          padding: "2px 10px", borderRadius: 4, fontSize: 10,
+                          background: "#0d2236", border: "1px solid #1e3a5f",
+                          color: "#6a9ab0", cursor: "pointer"
+                        }}>COPY</button>
                     </div>
                     <pre style={{
                       padding: 20, background: "#07101a",
                       fontSize: 12.5, color: "#a8c8e8", lineHeight: "21px",
-                      fontFamily: "'JetBrains Mono', monospace",
-                      overflowX: "auto"
+                      fontFamily: "'JetBrains Mono', monospace", overflowX: "auto"
                     }}>
                       {extractSection(rawText, "fixed") || "No fixed code found. See raw output."}
                     </pre>
@@ -713,7 +731,7 @@ ${code}
           )}
         </div>
 
-        {/* History Panel */}
+        {/* HISTORY PANEL */}
         {showHistory && (
           <div style={{
             width: 240, borderLeft: "1px solid #0f2035",
@@ -722,16 +740,19 @@ ${code}
           }}>
             <div style={{
               padding: "12px 16px", borderBottom: "1px solid #0f2035",
-              fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em"
-            }}>REVIEW HISTORY</div>
+              fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em",
+              display: "flex", justifyContent: "space-between", alignItems: "center"
+            }}>
+              REVIEW HISTORY
+              {user && <span style={{ fontSize: 9, color: "#2ecc71" }}>● SAVED</span>}
+            </div>
             {history.length === 0 ? (
               <div style={{ padding: 16, fontSize: 11, color: "#1e3a5f", textAlign: "center", marginTop: 20 }}>
                 No history yet
               </div>
             ) : history.map(h => (
               <div key={h.id} className="history-item" style={{
-                padding: "12px 16px", borderBottom: "1px solid #0a1a28",
-                background: "#07101a"
+                padding: "12px 16px", borderBottom: "1px solid #0a1a28", background: "#07101a"
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ fontSize: 11, color: "#00c8ff" }}>{h.language}</span>
@@ -755,4 +776,3 @@ ${code}
     </div>
   );
 }
-
