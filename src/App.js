@@ -57,7 +57,117 @@ print(find_duplicates(numbers))`,
 }
 
 var password = "admin123";
-fetchUserData(1);`
+fetchUserData(1);`,
+  "Java": `import java.util.ArrayList;
+
+public class Main {
+    public static int factorial(int n) {
+        if(n == 0) return 1;
+        return n * factorial(n-1);
+    }
+    
+    public static void main(String[] args) {
+        ArrayList<Integer> results = new ArrayList<>();
+        for(int i = 0; i <= 10; i++) {
+            results.add(factorial(i));
+        }
+        System.out.println(results);
+    }
+}`,
+  "TypeScript": `interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
+async function getUser(id: number) {
+    const response = await fetch('/api/users/' + id);
+    const user = response.json() as User;
+    return user;
+}
+
+function printUser(user: any) {
+    console.log("Name: " + user.name);
+    console.log("Email: " + user.email);
+}
+
+getUser(1).then(printUser);`,
+  "Go": `package main
+
+import "fmt"
+
+func fibonacci(n int) int {
+    if n <= 1 {
+        return n
+    }
+    return fibonacci(n-1) + fibonacci(n-2)
+}
+
+func main() {
+    for i := 0; i < 10; i++ {
+        fmt.Println(fibonacci(i))
+    }
+}`,
+  "Rust": `fn is_prime(n: u64) -> bool {
+    if n < 2 {
+        return false;
+    }
+    for i in 2..n {
+        if n % i == 0 {
+            return false;
+        }
+    }
+    true
+}
+
+fn main() {
+    let primes: Vec<u64> = (2..50).filter(|&x| is_prime(x)).collect();
+    println!("{:?}", primes);
+}`,
+  "C": `#include <stdio.h>
+#include <stdlib.h>
+
+int* createArray(int size) {
+    int* arr = malloc(size * sizeof(int));
+    for(int i = 0; i < size; i++) {
+        arr[i] = i * 2;
+    }
+    return arr;
+}
+
+int main() {
+    int* arr = createArray(5);
+    for(int i = 0; i < 5; i++) {
+        printf("%d ", arr[i]);
+    }
+    return 0;
+}`,
+  "PHP": `<?php
+function getUserData($id) {
+    $password = "admin123";
+    $query = "SELECT * FROM users WHERE id = " . $id;
+    $result = mysqli_query($conn, $query);
+    return $result;
+}
+
+$userId = $_GET['id'];
+$user = getUserData($userId);
+var_dump($user);
+?>`,
+  "Ruby": `def bubble_sort(arr)
+    n = arr.length
+    for i in 0..n-1
+        for j in 0..n-i-2
+            if arr[j] > arr[j+1]
+                arr[j], arr[j+1] = arr[j+1], arr[j]
+            end
+        end
+    end
+    arr
+end
+
+numbers = [64, 34, 25, 12, 22, 11, 90]
+puts bubble_sort(numbers).inspect`
 };
 
 function TypewriterText({ text, speed = 8 }) {
@@ -148,7 +258,7 @@ export default function App() {
   }, [code]);
 
   useEffect(() => {
-    if (language in SAMPLE_CODE) setCode(SAMPLE_CODE[language]);
+    setCode(SAMPLE_CODE[language]);
   }, [language]);
 
   useEffect(() => {
@@ -539,7 +649,9 @@ ${code}
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#e74c3c" }} />
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f1c40f" }} />
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2ecc71" }} />
-                <span style={{ fontSize: 11, color: "#3a5a7a", marginLeft: 8 }}>main.{language === "C++" ? "cpp" : language === "Python" ? "py" : language === "JavaScript" ? "js" : language === "TypeScript" ? "ts" : language === "Ruby" ? "rb" : language.toLowerCase()}</span>
+                <span style={{ fontSize: 11, color: "#3a5a7a", marginLeft: 8 }}>
+                  main.{language === "C++" ? "cpp" : language === "Python" ? "py" : language === "JavaScript" ? "js" : language === "TypeScript" ? "ts" : language === "Ruby" ? "rb" : language === "Go" ? "go" : language === "Rust" ? "rs" : language === "PHP" ? "php" : language.toLowerCase()}
+                </span>
               </div>
               <span style={{ fontSize: 10, color: "#2a4a5a" }}>{lineCount} lines</span>
             </div>
