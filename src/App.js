@@ -198,7 +198,7 @@ function TypewriterText({ text, speed = 8 }) {
 function ScoreRing({ score, label, color }) {
   const radius = 28;
   const circ = 2 * Math.PI * radius;
-  const offset = circ - (score / 100) * circ;
+  const offset = score === null ? circ : circ - (score / 100) * circ;
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
       <svg width="72" height="72" viewBox="0 0 72 72">
@@ -212,7 +212,7 @@ function ScoreRing({ score, label, color }) {
           transform="rotate(-90 36 36)"
           style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)" }}
         />
-        <text x="36" y="40" textAnchor="middle" fill={color} fontSize="14" fontWeight="700" fontFamily="'JetBrains Mono', monospace">{score}</text>
+        <text x="36" y="40" textAnchor="middle" fill={color} fontSize={score === null ? "9" : "14"} fontWeight="700" fontFamily="'JetBrains Mono', monospace">{score === null ? "N/A" : score}</text>
       </svg>
       <span style={{ fontSize: 11, color: "#8899aa", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
     </div>
@@ -307,7 +307,7 @@ export default function App() {
   };
 
   const parseResult = (text) => {
-    const scores = { quality: 0, performance: 0, security: 0, readability: 0 };
+    const scores = { quality: null, performance: null, security: null, readability: null };
     const qualM = text.match(/quality[:\s]+(\d+)/i);
     const perfM = text.match(/performance[:\s]+(\d+)/i);
     const secM = text.match(/security[:\s]+(\d+)/i);
@@ -472,7 +472,7 @@ ${code}
     setLoading(false);
   };
 
-  const scoreColor = (s) => s >= 80 ? "#2ecc71" : s >= 60 ? "#f1c40f" : "#e74c3c";
+  const scoreColor = (s) => s === null ? "#3a5a7a" : s === -1 ? "#e74c3c" : s >= 80 ? "#2ecc71" : s >= 60 ? "#f1c40f" : "#e74c3c";
 
   const extractSection = (text, section) => {
     const patterns = {
@@ -828,10 +828,10 @@ ${code}
                 borderBottom: "1px solid #0f2035",
                 display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap"
               }}>
-                <ScoreRing score={animateScores ? result.scores.quality : 0} label="Quality" color={scoreColor(result.scores.quality)} />
-                <ScoreRing score={animateScores ? result.scores.performance : 0} label="Perf" color={scoreColor(result.scores.performance)} />
-                <ScoreRing score={animateScores ? result.scores.security : 0} label="Security" color={scoreColor(result.scores.security)} />
-                <ScoreRing score={animateScores ? result.scores.readability : 0} label="Readability" color={scoreColor(result.scores.readability)} />
+                <ScoreRing score={animateScores ? result.scores.quality : null} label="Quality" color={scoreColor(result.scores.quality)} />
+                <ScoreRing score={animateScores ? result.scores.performance : null} label="Perf" color={scoreColor(result.scores.performance)} />
+                <ScoreRing score={animateScores ? result.scores.security : null} label="Security" color={scoreColor(result.scores.security)} />
+                <ScoreRing score={animateScores ? result.scores.readability : null} label="Readability" color={scoreColor(result.scores.readability)} />
                 <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
                   <TagBadge text={language} type="info" />
                   <TagBadge text={REVIEW_TYPES.find(r => r.id === reviewType)?.label} type="success" />
@@ -948,7 +948,7 @@ ${code}
                       fontSize: 9, padding: "1px 6px", borderRadius: 3,
                       background: "#0a1a28", border: `1px solid ${scoreColor(v)}`,
                       color: scoreColor(v)
-                    }}>{v}</span>
+                    }}>{v ?? "N/A"}</span>
                   ))}
                 </div>
               </div>
