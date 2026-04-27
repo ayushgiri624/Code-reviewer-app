@@ -466,8 +466,8 @@ ${code}
       }
 
     } catch (err) {
-      setRawText("Error connecting to AI. Please try again.\n\n" + err.message);
-      setResult({ scores: { quality: 0, performance: 0, security: 0, readability: 0 }, fullText: "" });
+      setRawText("ERROR:" + err.message);
+      setResult({ scores: { quality: -1, performance: -1, security: -1, readability: -1 }, fullText: "" });
     }
     setLoading(false);
   };
@@ -723,6 +723,8 @@ ${code}
 
         {/* RIGHT PANEL */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+          {/* READY STATE */}
           {!result && !loading && (
             <div style={{
               flex: 1, display: "flex", flexDirection: "column",
@@ -736,77 +738,90 @@ ${code}
             </div>
           )}
 
-        {loading && (
-  <div className="fade-in" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-    {/* Skeleton Score Rings */}
-    <div style={{
-      padding: "16px 24px", background: "#08111c",
-      borderBottom: "1px solid #0f2035",
-      display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap"
-    }}>
-      {["Quality", "Perf", "Security", "Readability"].map(label => (
-        <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: "50%",
-            background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.5s infinite"
-          }} />
-          <span style={{ fontSize: 11, color: "#3a5a7a", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
-        </div>
-      ))}
-    </div>
+          {/* SKELETON LOADING STATE */}
+          {loading && (
+            <div className="fade-in" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              <div style={{
+                padding: "16px 24px", background: "#08111c",
+                borderBottom: "1px solid #0f2035",
+                display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap"
+              }}>
+                {["Quality", "Perf", "Security", "Readability"].map(label => (
+                  <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div style={{
+                      width: 72, height: 72, borderRadius: "50%",
+                      background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
+                      backgroundSize: "200% 100%",
+                      animation: "shimmer 1.5s infinite"
+                    }} />
+                    <span style={{ fontSize: 11, color: "#3a5a7a", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", borderBottom: "1px solid #0f2035", background: "#07101a" }}>
+                {["REVIEW", "FIXED CODE", "RAW OUTPUT"].map(tab => (
+                  <div key={tab} style={{
+                    padding: "10px 20px", fontSize: 11, color: "#3a5a7a",
+                    letterSpacing: "0.12em", fontFamily: "'JetBrains Mono', monospace"
+                  }}>{tab}</div>
+                ))}
+              </div>
+              <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
+                  <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>SUMMARY</div>
+                  {[100, 85, 92].map((w, i) => (
+                    <div key={i} style={{
+                      height: 12, borderRadius: 6, marginBottom: 8, width: `${w}%`,
+                      background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
+                      backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite"
+                    }} />
+                  ))}
+                </div>
+                <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
+                  <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>ISSUES & RECOMMENDATIONS</div>
+                  {[90, 75, 85, 60].map((w, i) => (
+                    <div key={i} style={{
+                      height: 12, borderRadius: 6, marginBottom: 10, width: `${w}%`,
+                      background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
+                      backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite"
+                    }} />
+                  ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8 }}>
+                  <span className="spin" style={{ display: "inline-block", color: "#00c8ff", fontSize: 16 }}>⟳</span>
+                  <span style={{ fontSize: 12, color: "#00c8ff", letterSpacing: "0.1em" }} className="pulse">ANALYZING YOUR CODE...</span>
+                </div>
+              </div>
+            </div>
+          )}
 
-    {/* Skeleton Tabs */}
-    <div style={{ display: "flex", borderBottom: "1px solid #0f2035", background: "#07101a" }}>
-      {["REVIEW", "FIXED CODE", "RAW OUTPUT"].map(tab => (
-        <div key={tab} style={{
-          padding: "10px 20px", fontSize: 11, color: "#3a5a7a",
-          letterSpacing: "0.12em", fontFamily: "'JetBrains Mono', monospace"
-        }}>{tab}</div>
-      ))}
-    </div>
+          {/* ERROR STATE */}
+          {result && !loading && result.scores.quality === -1 && (
+            <div style={{
+              flex: 1, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 16
+            }}>
+              <div style={{ fontSize: 48 }}>⚠️</div>
+              <div style={{ fontSize: 14, color: "#e74c3c", letterSpacing: "0.1em" }}>CONNECTION ERROR</div>
+              <div style={{ fontSize: 12, color: "#6a8a9a", maxWidth: 300, textAlign: "center", lineHeight: 1.7 }}>
+                Failed to connect to the AI. Please check your internet connection and try again.
+              </div>
+              <button
+                className="glow-btn"
+                onClick={handleReview}
+                style={{
+                  marginTop: 8, padding: "10px 24px", borderRadius: 8,
+                  background: "linear-gradient(135deg, #0066ff, #00c8ff)",
+                  border: "none", color: "#fff", fontSize: 12, fontWeight: 700,
+                  cursor: "pointer", letterSpacing: "0.1em",
+                  fontFamily: "'JetBrains Mono', monospace"
+                }}
+              >↺ RETRY</button>
+            </div>
+          )}
 
-    {/* Skeleton Content */}
-    <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Skeleton Summary */}
-      <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
-        <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>SUMMARY</div>
-        {[100, 85, 92].map((w, i) => (
-          <div key={i} style={{
-            height: 12, borderRadius: 6, marginBottom: 8,
-            width: `${w}%`,
-            background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.5s infinite"
-          }} />
-        ))}
-      </div>
-
-      {/* Skeleton Issues */}
-      <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
-        <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>ISSUES & RECOMMENDATIONS</div>
-        {[90, 75, 85, 60].map((w, i) => (
-          <div key={i} style={{
-            height: 12, borderRadius: 6, marginBottom: 10,
-            width: `${w}%`,
-            background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.5s infinite"
-          }} />
-        ))}
-      </div>
-
-      {/* Analyzing indicator */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8 }}>
-        <span className="spin" style={{ display: "inline-block", color: "#00c8ff", fontSize: 16 }}>⟳</span>
-        <span style={{ fontSize: 12, color: "#00c8ff", letterSpacing: "0.1em" }} className="pulse">ANALYZING YOUR CODE...</span>
-      </div>
-    </div>
-  </div>
-)}
-
-          {result && !loading && (
+          {/* RESULT STATE */}
+          {result && !loading && result.scores.quality !== -1 && (
             <div className="fade-in" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
               <div style={{
                 padding: "16px 24px", background: "#08111c",
