@@ -252,6 +252,7 @@ export default function App() {
   const [lineCount, setLineCount] = useState(0);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     setLineCount(code.split("\n").length);
@@ -265,6 +266,12 @@ export default function App() {
     if (result) setTimeout(() => setAnimateScores(true), 300);
     else setAnimateScores(false);
   }, [result]);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -543,9 +550,9 @@ ${code}
         borderBottom: "1px solid #0f2035",
         background: "rgba(7,13,20,0.95)",
         backdropFilter: "blur(10px)",
-        padding: "0 24px",
+        padding: "0 16px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        height: 56
+        height: 56, flexWrap: "wrap"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
@@ -558,56 +565,65 @@ ${code}
             <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 15, color: "#fff", letterSpacing: "-0.02em" }}>
               CodeReview<span style={{ color: "#00c8ff" }}>AI</span>
             </div>
-            <div style={{ fontSize: 9, color: "#3a5a7a", letterSpacing: "0.15em", marginTop: -2 }}>BUILT BY AYUSH GIRI</div>
+            {!isMobile && <div style={{ fontSize: 9, color: "#3a5a7a", letterSpacing: "0.15em", marginTop: -2 }}>BUILT BY AYUSH GIRI</div>}
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{
-            padding: "4px 12px", borderRadius: 4,
-            background: "#0a1a0a", border: "1px solid #1a4a1a",
-            color: "#2ecc71", fontSize: 11, letterSpacing: "0.1em"
-          }}>● LIVE</div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {!isMobile && (
+            <div style={{
+              padding: "4px 12px", borderRadius: 4,
+              background: "#0a1a0a", border: "1px solid #1a4a1a",
+              color: "#2ecc71", fontSize: 11, letterSpacing: "0.1em"
+            }}>● LIVE</div>
+          )}
 
           <button onClick={() => setShowHistory(!showHistory)} style={{
-            padding: "4px 14px", borderRadius: 4,
+            padding: "4px 10px", borderRadius: 4,
             background: showHistory ? "#0d1f30" : "transparent",
             border: "1px solid #1e3a5f", color: "#6a9ab0",
             fontSize: 11, cursor: "pointer", letterSpacing: "0.08em"
           }}>
-            HISTORY ({history.length})
+            {isMobile ? `📋 ${history.length}` : `HISTORY (${history.length})`}
           </button>
 
           {!authLoading && (
             user ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <img src={user.photoURL} alt="avatar" style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid #1e3a5f" }} />
-                <span style={{ fontSize: 11, color: "#8899aa" }}>{user.displayName?.split(" ")[0]}</span>
+                {!isMobile && <span style={{ fontSize: 11, color: "#8899aa" }}>{user.displayName?.split(" ")[0]}</span>}
                 <button className="auth-btn" onClick={logOut} style={{
-                  padding: "4px 12px", borderRadius: 4,
+                  padding: "4px 10px", borderRadius: 4,
                   background: "transparent", border: "1px solid #c0392b",
                   color: "#e74c3c", fontSize: 11, cursor: "pointer"
-                }}>LOGOUT</button>
+                }}>{isMobile ? "↩" : "LOGOUT"}</button>
               </div>
             ) : (
               <button className="auth-btn" onClick={signInWithGoogle} style={{
-                padding: "4px 16px", borderRadius: 4,
+                padding: "4px 12px", borderRadius: 4,
                 background: "linear-gradient(135deg, #0066ff, #00c8ff)",
                 border: "none", color: "#fff",
                 fontSize: 11, cursor: "pointer", fontWeight: 700,
                 letterSpacing: "0.08em", fontFamily: "'JetBrains Mono', monospace"
-              }}>SIGN IN WITH GOOGLE</button>
+              }}>{isMobile ? "SIGN IN" : "SIGN IN WITH GOOGLE"}</button>
             )
           )}
         </div>
       </div>
 
-      <div style={{ position: "relative", zIndex: 5, display: "flex", height: "calc(100vh - 56px)" }}>
+      <div style={{
+        position: "relative", zIndex: 5,
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        minHeight: "calc(100vh - 56px)",
+        height: isMobile ? "auto" : "calc(100vh - 56px)"
+      }}>
 
         {/* LEFT PANEL */}
         <div style={{
-          width: showHistory ? "38%" : "45%",
-          borderRight: "1px solid #0f2035",
+          width: isMobile ? "100%" : showHistory ? "38%" : "45%",
+          borderRight: isMobile ? "none" : "1px solid #0f2035",
+          borderBottom: isMobile ? "1px solid #0f2035" : "none",
           display: "flex", flexDirection: "column",
           transition: "width 0.3s ease"
         }}>
@@ -643,7 +659,7 @@ ${code}
             </div>
           </div>
 
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", height: isMobile ? 300 : "auto", flex: isMobile ? "none" : 1 }}>
             <div style={{
               padding: "8px 16px", background: "#08111c",
               borderBottom: "1px solid #0f2035",
@@ -722,13 +738,14 @@ ${code}
         </div>
 
         {/* RIGHT PANEL */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: isMobile ? "visible" : "hidden", minHeight: isMobile ? 500 : "auto" }}>
 
           {/* READY STATE */}
           {!result && !loading && (
             <div style={{
               flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 16, color: "#1e3a5f"
+              alignItems: "center", justifyContent: "center", gap: 16, color: "#1e3a5f",
+              padding: 24
             }}>
               <div style={{ fontSize: 48 }}>⚡</div>
               <div style={{ fontSize: 14, letterSpacing: "0.1em", color: "#2a4a6a" }}>READY TO ANALYZE</div>
@@ -799,7 +816,7 @@ ${code}
           {result && !loading && result.scores.quality === -1 && (
             <div style={{
               flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 16
+              alignItems: "center", justifyContent: "center", gap: 16, padding: 24
             }}>
               <div style={{ fontSize: 48 }}>⚠️</div>
               <div style={{ fontSize: 14, color: "#e74c3c", letterSpacing: "0.1em" }}>CONNECTION ERROR</div>
@@ -826,13 +843,13 @@ ${code}
               <div style={{
                 padding: "16px 24px", background: "#08111c",
                 borderBottom: "1px solid #0f2035",
-                display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap"
+                display: "flex", alignItems: "center", gap: isMobile ? 12 : 24, flexWrap: "wrap"
               }}>
                 <ScoreRing score={animateScores ? result.scores.quality : null} label="Quality" color={scoreColor(result.scores.quality)} />
                 <ScoreRing score={animateScores ? result.scores.performance : null} label="Perf" color={scoreColor(result.scores.performance)} />
                 <ScoreRing score={animateScores ? result.scores.security : null} label="Security" color={scoreColor(result.scores.security)} />
                 <ScoreRing score={animateScores ? result.scores.readability : null} label="Readability" color={scoreColor(result.scores.readability)} />
-                <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <TagBadge text={language} type="info" />
                   <TagBadge text={REVIEW_TYPES.find(r => r.id === reviewType)?.label} type="success" />
                 </div>
@@ -845,16 +862,16 @@ ${code}
                   { id: "raw", label: "RAW OUTPUT" }
                 ].map(tab => (
                   <button key={tab.id} className="tab-btn" onClick={() => setActiveTab(tab.id)} style={{
-                    padding: "10px 20px", background: "transparent", border: "none",
+                    padding: "10px 12px", background: "transparent", border: "none",
                     borderBottom: `2px solid ${activeTab === tab.id ? "#00c8ff" : "transparent"}`,
                     color: activeTab === tab.id ? "#00c8ff" : "#3a5a7a",
-                    fontSize: 11, cursor: "pointer", letterSpacing: "0.12em",
+                    fontSize: isMobile ? 10 : 11, cursor: "pointer", letterSpacing: "0.08em",
                     fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
                   }}>{tab.label}</button>
                 ))}
               </div>
 
-              <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
+              <div style={{ flex: 1, overflow: "auto", padding: isMobile ? 16 : 24 }}>
                 {activeTab === "review" && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                     <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
@@ -917,9 +934,12 @@ ${code}
         {/* HISTORY PANEL */}
         {showHistory && (
           <div style={{
-            width: 240, borderLeft: "1px solid #0f2035",
+            width: isMobile ? "100%" : 240,
+            borderLeft: isMobile ? "none" : "1px solid #0f2035",
+            borderTop: isMobile ? "1px solid #0f2035" : "none",
             background: "#07101a", overflow: "auto",
-            display: "flex", flexDirection: "column"
+            display: "flex", flexDirection: "column",
+            maxHeight: isMobile ? 300 : "none"
           }}>
             <div style={{
               padding: "12px 16px", borderBottom: "1px solid #0f2035",
