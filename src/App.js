@@ -944,7 +944,7 @@ ${code}
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #0f2035", background: "#07101a" }}>
+              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #0f2035", background: "#07101a", alignItems: "center" }}>
                 {[
                   { id: "review", label: "REVIEW" },
                   { id: "fixed", label: "FIXED CODE" },
@@ -958,6 +958,17 @@ ${code}
                     fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
                   }}>{tab.label}</button>
                 ))}
+                <button
+                  onClick={downloadPDF}
+                  style={{
+                    marginLeft: "auto", marginRight: 12,
+                    padding: "4px 12px", borderRadius: 4,
+                    background: "linear-gradient(135deg, #0066ff, #00c8ff)",
+                    border: "none", color: "#fff", fontSize: 10,
+                    cursor: "pointer", fontWeight: 700,
+                    letterSpacing: "0.08em", fontFamily: "'JetBrains Mono', monospace"
+                  }}
+                >↓ PDF</button>
               </div>
 
               <div style={{ flex: 1, overflow: "auto", padding: isMobile ? 16 : 24 }}>
