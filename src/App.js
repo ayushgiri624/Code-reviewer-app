@@ -193,7 +193,7 @@ function TypewriterText({ text, speed = 8 }) {
     return () => clearInterval(interval);
   }, [text, speed]);
 
-  return <span>{displayed}{!done && text && <span className="cursor">▋</span>}</span>;
+  return <span>{displayed}{!done && text && <span className="cursor">|</span>}</span>;
 }
 
 function ScoreRing({ score, label, color }) {
@@ -203,7 +203,7 @@ function ScoreRing({ score, label, color }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
       <svg width="72" height="72" viewBox="0 0 72 72">
-        <circle cx="36" cy="36" r={radius} fill="none" stroke="#1e2a3a" strokeWidth="6" />
+        <circle cx="36" cy="36" r={radius} fill="none" stroke="#e8edf2" strokeWidth="6" />
         <circle
           cx="36" cy="36" r={radius} fill="none"
           stroke={color} strokeWidth="6"
@@ -215,18 +215,18 @@ function ScoreRing({ score, label, color }) {
         />
         <text x="36" y="40" textAnchor="middle" fill={color} fontSize={score === null ? "9" : "14"} fontWeight="700" fontFamily="'JetBrains Mono', monospace">{score === null ? "N/A" : score}</text>
       </svg>
-      <span style={{ fontSize: 11, color: "#8899aa", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontSize: 11, color: "#6b7a8d", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
     </div>
   );
 }
 
 function TagBadge({ text, type }) {
   const colors = {
-    bug: { bg: "#2d1a1a", border: "#c0392b", text: "#e74c3c" },
-    warning: { bg: "#2d2a1a", border: "#d4a017", text: "#f1c40f" },
-    info: { bg: "#1a2a2d", border: "#1a7fa0", text: "#3498db" },
-    success: { bg: "#1a2d1e", border: "#1e8449", text: "#2ecc71" },
-    security: { bg: "#2d1a2d", border: "#8e44ad", text: "#9b59b6" },
+    bug: { bg: "#fef2f2", border: "#fca5a5", text: "#dc2626" },
+    warning: { bg: "#fffbeb", border: "#fcd34d", text: "#d97706" },
+    info: { bg: "#eff6ff", border: "#93c5fd", text: "#2563eb" },
+    success: { bg: "#f0fdf4", border: "#86efac", text: "#16a34a" },
+    security: { bg: "#faf5ff", border: "#c4b5fd", text: "#7c3aed" },
   };
   const c = colors[type] || colors.info;
   return (
@@ -451,22 +451,14 @@ ${code}
       const parsed = parseResult(text);
       setResult(parsed);
 
-      const reviewData = {
-        language,
-        reviewType,
-        code,
-        result: text,
-        scores: parsed.scores,
-      };
+      const reviewData = { language, reviewType, code, result: text, scores: parsed.scores };
 
       if (user) {
         await saveReview(user.uid, reviewData);
         await fetchHistory(user.uid);
       } else {
         setHistory(prev => [{
-          id: Date.now(),
-          language,
-          reviewType,
+          id: Date.now(), language, reviewType,
           code: code.slice(0, 100) + "...",
           scores: parsed.scores,
           time: new Date().toLocaleTimeString()
@@ -480,7 +472,7 @@ ${code}
     setLoading(false);
   };
 
-  const scoreColor = (s) => s === null ? "#3a5a7a" : s === -1 ? "#e74c3c" : s >= 80 ? "#2ecc71" : s >= 60 ? "#f1c40f" : "#e74c3c";
+  const scoreColor = (s) => s === null ? "#94a3b8" : s === -1 ? "#dc2626" : s >= 80 ? "#16a34a" : s >= 60 ? "#d97706" : "#dc2626";
 
   const extractSection = (text, section) => {
     const patterns = {
@@ -491,137 +483,99 @@ ${code}
     const match = text.match(patterns[section]);
     return match ? match[1].trim() : "";
   };
+
   const downloadPDF = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Header
-    doc.setFillColor(7, 13, 20);
+    doc.setFillColor(37, 99, 235);
     doc.rect(0, 0, pageWidth, 40, "F");
-    doc.setTextColor(0, 200, 255);
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
     doc.text("CodeReviewAI", 20, 20);
     doc.setFontSize(10);
-    doc.setTextColor(100, 150, 180);
+    doc.setTextColor(200, 220, 255);
     doc.text(`Language: ${language} | Type: ${reviewType} | ${new Date().toLocaleDateString()}`, 20, 32);
-
-    // Scores
-    doc.setFillColor(8, 17, 28);
+    doc.setFillColor(248, 250, 252);
     doc.rect(0, 40, pageWidth, 35, "F");
-    doc.setFontSize(11);
     const scoreLabels = ["Quality", "Performance", "Security", "Readability"];
     const scoreValues = [result.scores.quality, result.scores.performance, result.scores.security, result.scores.readability];
     scoreLabels.forEach((label, i) => {
       const x = 20 + i * 45;
       const val = scoreValues[i];
-      const color = val >= 80 ? [46, 204, 113] : val >= 60 ? [241, 196, 15] : [231, 76, 60];
+      const color = val >= 80 ? [22, 163, 74] : val >= 60 ? [217, 119, 6] : [220, 38, 38];
       doc.setTextColor(...color);
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text(val !== null ? String(val) : "N/A", x, 60);
       doc.setFontSize(8);
-      doc.setTextColor(100, 150, 180);
+      doc.setTextColor(107, 114, 128);
       doc.setFont("helvetica", "normal");
       doc.text(label.toUpperCase(), x, 68);
     });
-
-    // Summary
-    doc.setTextColor(30, 50, 70);
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 75, pageWidth, 10, "F");
     doc.setFontSize(10);
-    doc.setTextColor(30, 100, 150);
+    doc.setTextColor(37, 99, 235);
     doc.setFont("helvetica", "bold");
-    doc.text("SUMMARY", 20, 83);
-
+    doc.text("SUMMARY", 20, 85);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(50, 50, 50);
+    doc.setTextColor(30, 30, 30);
     doc.setFontSize(9);
     const summary = extractSection(rawText, "summary");
     const summaryLines = doc.splitTextToSize(summary || "No summary available.", pageWidth - 40);
     doc.text(summaryLines, 20, 93);
-
-    // Issues
     const issuesY = 93 + summaryLines.length * 5 + 10;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.setTextColor(30, 100, 150);
+    doc.setTextColor(37, 99, 235);
     doc.text("ISSUES & RECOMMENDATIONS", 20, issuesY);
-
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(50, 50, 50);
+    doc.setTextColor(30, 30, 30);
     doc.setFontSize(9);
     const issues = extractSection(rawText, "issues");
     const issueLines = doc.splitTextToSize(issues || "No issues found.", pageWidth - 40);
     doc.text(issueLines, 20, issuesY + 10);
-
-    // Fixed Code
-    const fixedY = issuesY + 10 + issueLines.length * 5 + 10;
-    if (fixedY < 250) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(30, 100, 150);
-      doc.text("IMPROVED CODE", 20, fixedY);
-      doc.setFont("courier", "normal");
-      doc.setTextColor(50, 50, 50);
-      doc.setFontSize(8);
-      const fixedCode = extractSection(rawText, "fixed");
-      const codeLines = doc.splitTextToSize(fixedCode || "No fixed code.", pageWidth - 40);
-      doc.text(codeLines.slice(0, 30), 20, fixedY + 10);
-    }
-
-    // Footer
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text("Generated by CodeReviewAI — Built by Ayush Giri", 20, 285);
-
     doc.save(`CodeReview_${language}_${new Date().toLocaleDateString().replace(/\//g, "-")}.pdf`);
   };
 
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#070d14",
-      color: "#c9d8e8",
+      background: "#f8fafc",
+      color: "#1e293b",
       fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
       position: "relative",
-      overflow: "hidden"
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: #0d1520; }
-        ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
-        .cursor { animation: blink 1s step-end infinite; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .cursor { animation: blink 1s step-end infinite; color: #2563eb; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         .glow-btn { transition: all 0.2s; }
-        .glow-btn:hover { box-shadow: 0 0 20px rgba(0,200,255,0.3); transform: translateY(-1px); }
+        .glow-btn:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.3); transform: translateY(-1px); }
         .glow-btn:active { transform: translateY(0); }
         .lang-btn { transition: all 0.15s; cursor: pointer; }
-        .lang-btn:hover { border-color: #00c8ff !important; color: #00c8ff !important; }
+        .lang-btn:hover { border-color: #2563eb !important; color: #2563eb !important; background: #eff6ff !important; }
         .review-type { transition: all 0.15s; cursor: pointer; }
-        .review-type:hover { border-color: #00c8ff !important; }
+        .review-type:hover { border-color: #2563eb !important; background: #eff6ff !important; }
         .tab-btn { transition: all 0.2s; cursor: pointer; }
-        .tab-btn:hover { color: #00c8ff !important; }
+        .tab-btn:hover { color: #2563eb !important; }
         .fade-in { animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         .pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        .grid-bg {
-          position: fixed; inset: 0; pointer-events: none; z-index: 0;
-          background-image: linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
-          background-size: 40px 40px;
-        }
         .history-item { transition: background 0.15s; cursor: pointer; }
-        .history-item:hover { background: #0d1f30 !important; }
+        .history-item:hover { background: #f1f5f9 !important; }
         textarea { resize: none; outline: none; }
-        textarea:focus { border-color: #1e4a6e !important; box-shadow: 0 0 0 2px rgba(0,150,255,0.1); }
+        textarea:focus { border-color: #93c5fd !important; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
         pre { white-space: pre-wrap; word-break: break-word; }
         .auth-btn { transition: all 0.2s; cursor: pointer; }
         .auth-btn:hover { opacity: 0.85; transform: translateY(-1px); }
@@ -631,47 +585,45 @@ ${code}
         }
       `}</style>
 
-      <div className="grid-bg" />
-
       {/* NAVBAR */}
       <div style={{
-        position: "relative", zIndex: 10,
-        borderBottom: "1px solid #0f2035",
-        background: "rgba(7,13,20,0.95)",
+        position: "sticky", top: 0, zIndex: 10,
+        borderBottom: "1px solid #e2e8f0",
+        background: "rgba(255,255,255,0.95)",
         backdropFilter: "blur(10px)",
         padding: "0 16px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        height: 56, flexWrap: "wrap"
+        height: 56, boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8,
-            background: "linear-gradient(135deg, #00c8ff, #0066ff)",
+            background: "linear-gradient(135deg, #2563eb, #0ea5e9)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, boxShadow: "0 0 12px rgba(0,200,255,0.4)"
+            fontSize: 16, boxShadow: "0 2px 8px rgba(37,99,235,0.3)"
           }}>⚡</div>
           <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 15, color: "#fff", letterSpacing: "-0.02em" }}>
-              CodeReview<span style={{ color: "#00c8ff" }}>AI</span>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 15, color: "#0f172a", letterSpacing: "-0.02em" }}>
+              CodeReview<span style={{ color: "#2563eb" }}>AI</span>
             </div>
-            {!isMobile && <div style={{ fontSize: 9, color: "#3a5a7a", letterSpacing: "0.15em", marginTop: -2 }}>BUILT BY AYUSH GIRI</div>}
+            {!isMobile && <div style={{ fontSize: 9, color: "#94a3b8", letterSpacing: "0.15em", marginTop: -2 }}>BUILT BY AYUSH GIRI</div>}
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {!isMobile && (
             <div style={{
-              padding: "4px 12px", borderRadius: 4,
-              background: "#0a1a0a", border: "1px solid #1a4a1a",
-              color: "#2ecc71", fontSize: 11, letterSpacing: "0.1em"
+              padding: "4px 12px", borderRadius: 20,
+              background: "#f0fdf4", border: "1px solid #86efac",
+              color: "#16a34a", fontSize: 11, letterSpacing: "0.1em"
             }}>● LIVE</div>
           )}
 
           <button onClick={() => setShowHistory(!showHistory)} style={{
-            padding: "4px 10px", borderRadius: 4,
-            background: showHistory ? "#0d1f30" : "transparent",
-            border: "1px solid #1e3a5f", color: "#6a9ab0",
-            fontSize: 11, cursor: "pointer", letterSpacing: "0.08em"
+            padding: "4px 12px", borderRadius: 6,
+            background: showHistory ? "#eff6ff" : "#f8fafc",
+            border: "1px solid #e2e8f0", color: "#64748b",
+            fontSize: 11, cursor: "pointer", letterSpacing: "0.05em"
           }}>
             {isMobile ? `📋 ${history.length}` : `HISTORY (${history.length})`}
           </button>
@@ -679,21 +631,22 @@ ${code}
           {!authLoading && (
             user ? (
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <img src={user.photoURL} alt="avatar" style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid #1e3a5f" }} />
-                {!isMobile && <span style={{ fontSize: 11, color: "#8899aa" }}>{user.displayName?.split(" ")[0]}</span>}
+                <img src={user.photoURL} alt="avatar" style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid #e2e8f0" }} />
+                {!isMobile && <span style={{ fontSize: 11, color: "#64748b" }}>{user.displayName?.split(" ")[0]}</span>}
                 <button className="auth-btn" onClick={logOut} style={{
-                  padding: "4px 10px", borderRadius: 4,
-                  background: "transparent", border: "1px solid #c0392b",
-                  color: "#e74c3c", fontSize: 11, cursor: "pointer"
+                  padding: "4px 10px", borderRadius: 6,
+                  background: "#fff", border: "1px solid #fca5a5",
+                  color: "#dc2626", fontSize: 11, cursor: "pointer"
                 }}>{isMobile ? "↩" : "LOGOUT"}</button>
               </div>
             ) : (
               <button className="auth-btn" onClick={signInWithGoogle} style={{
-                padding: "4px 12px", borderRadius: 4,
-                background: "linear-gradient(135deg, #0066ff, #00c8ff)",
+                padding: "6px 14px", borderRadius: 6,
+                background: "linear-gradient(135deg, #2563eb, #0ea5e9)",
                 border: "none", color: "#fff",
                 fontSize: 11, cursor: "pointer", fontWeight: 700,
-                letterSpacing: "0.08em", fontFamily: "'JetBrains Mono', monospace"
+                letterSpacing: "0.05em", fontFamily: "'JetBrains Mono', monospace",
+                boxShadow: "0 2px 8px rgba(37,99,235,0.3)"
               }}>{isMobile ? "SIGN IN" : "SIGN IN WITH GOOGLE"}</button>
             )
           )}
@@ -701,7 +654,6 @@ ${code}
       </div>
 
       <div style={{
-        position: "relative", zIndex: 5,
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         minHeight: "calc(100vh - 56px)",
@@ -711,71 +663,75 @@ ${code}
         {/* LEFT PANEL */}
         <div style={{
           width: isMobile ? "100%" : showHistory ? "38%" : "45%",
-          borderRight: isMobile ? "none" : "1px solid #0f2035",
-          borderBottom: isMobile ? "1px solid #0f2035" : "none",
+          borderRight: isMobile ? "none" : "1px solid #e2e8f0",
+          borderBottom: isMobile ? "1px solid #e2e8f0" : "none",
           display: "flex", flexDirection: "column",
+          background: "#ffffff",
           transition: "width 0.3s ease"
         }}>
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid #0f2035", background: "#08111c" }}>
-            <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 8 }}>LANGUAGE</div>
+          {/* Language selector */}
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9", background: "#fff" }}>
+            <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: "0.15em", marginBottom: 8, fontWeight: 600 }}>LANGUAGE</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {LANGUAGES.map(l => (
                 <button key={l} className="lang-btn" onClick={() => setLanguage(l)} style={{
-                  padding: "3px 10px", borderRadius: 4, fontSize: 11,
-                  background: language === l ? "#0d2a3f" : "transparent",
-                  border: `1px solid ${language === l ? "#00c8ff" : "#1e3a5f"}`,
-                  color: language === l ? "#00c8ff" : "#4a7090",
-                  cursor: "pointer"
+                  padding: "3px 10px", borderRadius: 6, fontSize: 11,
+                  background: language === l ? "#eff6ff" : "#f8fafc",
+                  border: `1px solid ${language === l ? "#2563eb" : "#e2e8f0"}`,
+                  color: language === l ? "#2563eb" : "#64748b",
+                  cursor: "pointer", fontWeight: language === l ? 600 : 400
                 }}>{l}</button>
               ))}
             </div>
           </div>
 
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid #0f2035", background: "#08111c" }}>
-            <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 8 }}>REVIEW TYPE</div>
+          {/* Review type */}
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9", background: "#fff" }}>
+            <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: "0.15em", marginBottom: 8, fontWeight: 600 }}>REVIEW TYPE</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
               {REVIEW_TYPES.map(rt => (
                 <button key={rt.id} className="review-type" onClick={() => setReviewType(rt.id)} style={{
-                  padding: "8px 10px", borderRadius: 6, textAlign: "left",
-                  background: reviewType === rt.id ? "#0d2236" : "transparent",
-                  border: `1px solid ${reviewType === rt.id ? "#00c8ff" : "#1e3a5f"}`,
+                  padding: "8px 10px", borderRadius: 8, textAlign: "left",
+                  background: reviewType === rt.id ? "#eff6ff" : "#f8fafc",
+                  border: `1px solid ${reviewType === rt.id ? "#2563eb" : "#e2e8f0"}`,
                   cursor: "pointer"
                 }}>
-                  <div style={{ fontSize: 13, marginBottom: 2 }}>{rt.icon} <span style={{ color: reviewType === rt.id ? "#00c8ff" : "#8899aa", fontSize: 11, fontWeight: 600 }}>{rt.label}</span></div>
-                  <div style={{ fontSize: 10, color: "#3a5a7a" }}>{rt.desc}</div>
+                  <div style={{ fontSize: 13, marginBottom: 2 }}>{rt.icon} <span style={{ color: reviewType === rt.id ? "#2563eb" : "#475569", fontSize: 11, fontWeight: 600 }}>{rt.label}</span></div>
+                  <div style={{ fontSize: 10, color: "#94a3b8" }}>{rt.desc}</div>
                 </button>
               ))}
             </div>
           </div>
 
+          {/* Code editor */}
           <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", height: isMobile ? 300 : "auto", flex: isMobile ? "none" : 1 }}>
             <div style={{
-              padding: "8px 16px", background: "#08111c",
-              borderBottom: "1px solid #0f2035",
+              padding: "8px 16px", background: "#f8fafc",
+              borderBottom: "1px solid #f1f5f9",
               display: "flex", alignItems: "center", justifyContent: "space-between"
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#e74c3c" }} />
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f1c40f" }} />
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2ecc71" }} />
-                <span style={{ fontSize: 11, color: "#3a5a7a", marginLeft: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} />
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#fbbf24" }} />
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399" }} />
+                <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 8 }}>
                   main.{language === "C++" ? "cpp" : language === "Python" ? "py" : language === "JavaScript" ? "js" : language === "TypeScript" ? "ts" : language === "Ruby" ? "rb" : language === "Go" ? "go" : language === "Rust" ? "rs" : language === "PHP" ? "php" : language.toLowerCase()}
                 </span>
               </div>
-              <span style={{ fontSize: 10, color: "#2a4a5a" }}>{lineCount} lines</span>
+              <span style={{ fontSize: 10, color: "#cbd5e1" }}>{lineCount} lines</span>
             </div>
 
             <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
               <div style={{
-                width: 40, background: "#07101a",
+                width: 40, background: "#f8fafc",
                 padding: "12px 0", overflowY: "hidden",
-                borderRight: "1px solid #0f2035", flexShrink: 0
+                borderRight: "1px solid #f1f5f9", flexShrink: 0
               }}>
                 {code.split("\n").map((_, i) => (
                   <div key={i} style={{
                     height: 21, display: "flex", alignItems: "center",
                     justifyContent: "flex-end", paddingRight: 8,
-                    fontSize: 11, color: "#1e3a5f"
+                    fontSize: 11, color: "#cbd5e1"
                   }}>{i + 1}</div>
                 ))}
               </div>
@@ -784,8 +740,8 @@ ${code}
                 onChange={e => setCode(e.target.value)}
                 spellCheck={false}
                 style={{
-                  flex: 1, background: "#07101a",
-                  border: "none", color: "#a8c8e8",
+                  flex: 1, background: "#fff",
+                  border: "none", color: "#334155",
                   fontSize: 12.5, lineHeight: "21px",
                   padding: "12px 16px",
                   fontFamily: "'JetBrains Mono', monospace",
@@ -795,12 +751,13 @@ ${code}
             </div>
           </div>
 
-          <div style={{ padding: 16, background: "#08111c", borderTop: "1px solid #0f2035" }}>
+          {/* Run button */}
+          <div style={{ padding: 16, background: "#fff", borderTop: "1px solid #f1f5f9" }}>
             {!user && (
               <div style={{
-                marginBottom: 10, padding: "8px 12px", borderRadius: 6,
-                background: "#0d1a2d", border: "1px solid #1e3a5f",
-                fontSize: 11, color: "#6a9ab0", textAlign: "center"
+                marginBottom: 10, padding: "8px 12px", borderRadius: 8,
+                background: "#f0f9ff", border: "1px solid #bae6fd",
+                fontSize: 11, color: "#0369a1", textAlign: "center"
               }}>
                 Sign in to save your review history permanently
               </div>
@@ -811,12 +768,13 @@ ${code}
               disabled={loading || !code.trim()}
               style={{
                 width: "100%", padding: "12px 0", borderRadius: 8,
-                background: loading ? "#0a1a2a" : "linear-gradient(135deg, #0066ff, #00c8ff)",
-                border: loading ? "1px solid #1e3a5f" : "none",
-                color: loading ? "#4a7090" : "#fff",
+                background: loading ? "#f1f5f9" : "linear-gradient(135deg, #2563eb, #0ea5e9)",
+                border: "none",
+                color: loading ? "#94a3b8" : "#fff",
                 fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
                 letterSpacing: "0.1em", fontFamily: "'JetBrains Mono', monospace",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: loading ? "none" : "0 4px 12px rgba(37,99,235,0.3)"
               }}
             >
               {loading ? (
@@ -827,75 +785,80 @@ ${code}
         </div>
 
         {/* RIGHT PANEL */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: isMobile ? "visible" : "hidden", minHeight: isMobile ? 500 : "auto" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: isMobile ? "visible" : "hidden", minHeight: isMobile ? 500 : "auto", background: "#f8fafc" }}>
 
           {/* READY STATE */}
           {!result && !loading && (
             <div style={{
               flex: 1, display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 16, color: "#1e3a5f",
+              alignItems: "center", justifyContent: "center", gap: 16,
               padding: 24
             }}>
-              <div style={{ fontSize: 48 }}>⚡</div>
-              <div style={{ fontSize: 14, letterSpacing: "0.1em", color: "#2a4a6a" }}>READY TO ANALYZE</div>
-              <div style={{ fontSize: 11, color: "#1a2a3a", maxWidth: 240, textAlign: "center", lineHeight: 1.6 }}>
-                Select your language, choose review type, and click Run Analysis
+              <div style={{
+                width: 80, height: 80, borderRadius: 20,
+                background: "linear-gradient(135deg, #2563eb, #0ea5e9)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 36, boxShadow: "0 8px 24px rgba(37,99,235,0.2)"
+              }}>⚡</div>
+              <div style={{ fontSize: 18, color: "#0f172a", fontWeight: 700 }}>Ready to Analyze</div>
+              <div style={{ fontSize: 12, color: "#94a3b8", maxWidth: 260, textAlign: "center", lineHeight: 1.6 }}>
+                Select your language, choose a review type, and click Run Analysis
               </div>
             </div>
           )}
 
-          {/* SKELETON LOADING STATE */}
+          {/* SKELETON LOADING */}
           {loading && (
             <div className="fade-in" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
               <div style={{
-                padding: "16px 24px", background: "#08111c",
-                borderBottom: "1px solid #0f2035",
+                padding: "16px 24px", background: "#fff",
+                borderBottom: "1px solid #e2e8f0",
                 display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap"
               }}>
                 {["Quality", "Perf", "Security", "Readability"].map(label => (
                   <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                     <div style={{
                       width: 72, height: 72, borderRadius: "50%",
-                      background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
+                      background: "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
                       backgroundSize: "200% 100%",
                       animation: "shimmer 1.5s infinite"
                     }} />
-                    <span style={{ fontSize: 11, color: "#3a5a7a", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
+                    <span style={{ fontSize: 11, color: "#94a3b8", letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</span>
                   </div>
                 ))}
               </div>
-              <div style={{ display: "flex", borderBottom: "1px solid #0f2035", background: "#07101a" }}>
+              <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
                 {["REVIEW", "FIXED CODE", "RAW OUTPUT"].map(tab => (
                   <div key={tab} style={{
-                    padding: "10px 20px", fontSize: 11, color: "#3a5a7a",
+                    padding: "10px 20px", fontSize: 11, color: "#94a3b8",
                     letterSpacing: "0.12em", fontFamily: "'JetBrains Mono', monospace"
                   }}>{tab}</div>
                 ))}
               </div>
               <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-                <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
-                  <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>SUMMARY</div>
+                <div style={{ padding: 16, borderRadius: 8, background: "#fff", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: "0.15em", marginBottom: 10 }}>SUMMARY</div>
                   {[100, 85, 92].map((w, i) => (
                     <div key={i} style={{
                       height: 12, borderRadius: 6, marginBottom: 8, width: `${w}%`,
-                      background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
+                      background: "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
                       backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite"
                     }} />
                   ))}
                 </div>
-                <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
-                  <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>ISSUES & RECOMMENDATIONS</div>
+                <div style={{ padding: 16, borderRadius: 8, background: "#fff", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: "0.15em", marginBottom: 10 }}>ISSUES & RECOMMENDATIONS</div>
                   {[90, 75, 85, 60].map((w, i) => (
                     <div key={i} style={{
                       height: 12, borderRadius: 6, marginBottom: 10, width: `${w}%`,
-                      background: "linear-gradient(90deg, #0d1a2d 25%, #1a2a3f 50%, #0d1a2d 75%)",
+                      background: "linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%)",
                       backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite"
                     }} />
                   ))}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginTop: 8 }}>
-                  <span className="spin" style={{ display: "inline-block", color: "#00c8ff", fontSize: 16 }}>⟳</span>
-                  <span style={{ fontSize: 12, color: "#00c8ff", letterSpacing: "0.1em" }} className="pulse">ANALYZING YOUR CODE...</span>
+                  <span className="spin" style={{ display: "inline-block", color: "#2563eb", fontSize: 16 }}>⟳</span>
+                  <span style={{ fontSize: 12, color: "#2563eb", letterSpacing: "0.1em" }} className="pulse">ANALYZING YOUR CODE...</span>
                 </div>
               </div>
             </div>
@@ -908,30 +871,27 @@ ${code}
               alignItems: "center", justifyContent: "center", gap: 16, padding: 24
             }}>
               <div style={{ fontSize: 48 }}>⚠️</div>
-              <div style={{ fontSize: 14, color: "#e74c3c", letterSpacing: "0.1em" }}>CONNECTION ERROR</div>
-              <div style={{ fontSize: 12, color: "#6a8a9a", maxWidth: 300, textAlign: "center", lineHeight: 1.7 }}>
+              <div style={{ fontSize: 16, color: "#dc2626", fontWeight: 700 }}>Connection Error</div>
+              <div style={{ fontSize: 12, color: "#94a3b8", maxWidth: 300, textAlign: "center", lineHeight: 1.7 }}>
                 Failed to connect to the AI. Please check your internet connection and try again.
               </div>
-              <button
-                className="glow-btn"
-                onClick={handleReview}
-                style={{
-                  marginTop: 8, padding: "10px 24px", borderRadius: 8,
-                  background: "linear-gradient(135deg, #0066ff, #00c8ff)",
-                  border: "none", color: "#fff", fontSize: 12, fontWeight: 700,
-                  cursor: "pointer", letterSpacing: "0.1em",
-                  fontFamily: "'JetBrains Mono', monospace"
-                }}
-              >↺ RETRY</button>
+              <button className="glow-btn" onClick={handleReview} style={{
+                marginTop: 8, padding: "10px 24px", borderRadius: 8,
+                background: "linear-gradient(135deg, #2563eb, #0ea5e9)",
+                border: "none", color: "#fff", fontSize: 12, fontWeight: 700,
+                cursor: "pointer", letterSpacing: "0.1em",
+                fontFamily: "'JetBrains Mono', monospace"
+              }}>↺ RETRY</button>
             </div>
           )}
 
           {/* RESULT STATE */}
           {result && !loading && result.scores.quality !== -1 && (
             <div className="fade-in" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              {/* Score rings */}
               <div style={{
-                padding: "16px 24px", background: "#08111c",
-                borderBottom: "1px solid #0f2035",
+                padding: "16px 24px", background: "#fff",
+                borderBottom: "1px solid #e2e8f0",
                 display: "flex", alignItems: "center", gap: isMobile ? 12 : 24, flexWrap: "wrap"
               }}>
                 <ScoreRing score={animateScores ? result.scores.quality : null} label="Quality" color={scoreColor(result.scores.quality)} />
@@ -944,45 +904,44 @@ ${code}
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #0f2035", background: "#07101a", alignItems: "center" }}>
+              {/* Tabs */}
+              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #e2e8f0", background: "#fff", alignItems: "center" }}>
                 {[
                   { id: "review", label: "REVIEW" },
                   { id: "fixed", label: "FIXED CODE" },
                   { id: "raw", label: "RAW OUTPUT" }
                 ].map(tab => (
                   <button key={tab.id} className="tab-btn" onClick={() => setActiveTab(tab.id)} style={{
-                    padding: "10px 12px", background: "transparent", border: "none",
-                    borderBottom: `2px solid ${activeTab === tab.id ? "#00c8ff" : "transparent"}`,
-                    color: activeTab === tab.id ? "#00c8ff" : "#3a5a7a",
+                    padding: "10px 16px", background: "transparent", border: "none",
+                    borderBottom: `2px solid ${activeTab === tab.id ? "#2563eb" : "transparent"}`,
+                    color: activeTab === tab.id ? "#2563eb" : "#94a3b8",
                     fontSize: isMobile ? 10 : 11, cursor: "pointer", letterSpacing: "0.08em",
                     fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
                   }}>{tab.label}</button>
                 ))}
-                <button
-                  onClick={downloadPDF}
-                  style={{
-                    marginLeft: "auto", marginRight: 12,
-                    padding: "4px 12px", borderRadius: 4,
-                    background: "linear-gradient(135deg, #0066ff, #00c8ff)",
-                    border: "none", color: "#fff", fontSize: 10,
-                    cursor: "pointer", fontWeight: 700,
-                    letterSpacing: "0.08em", fontFamily: "'JetBrains Mono', monospace"
-                  }}
-                >↓ PDF</button>
+                <button onClick={downloadPDF} style={{
+                  marginLeft: "auto", marginRight: 12,
+                  padding: "4px 12px", borderRadius: 6,
+                  background: "linear-gradient(135deg, #2563eb, #0ea5e9)",
+                  border: "none", color: "#fff", fontSize: 10,
+                  cursor: "pointer", fontWeight: 700,
+                  letterSpacing: "0.05em", fontFamily: "'JetBrains Mono', monospace"
+                }}>↓ PDF</button>
               </div>
 
+              {/* Tab content */}
               <div style={{ flex: 1, overflow: "auto", padding: isMobile ? 16 : 24 }}>
                 {activeTab === "review" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                    <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
-                      <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>SUMMARY</div>
-                      <div style={{ fontSize: 13, color: "#a8c8e8", lineHeight: 1.7 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ padding: 16, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                      <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: "0.15em", marginBottom: 10, fontWeight: 600 }}>SUMMARY</div>
+                      <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7 }}>
                         <TypewriterText text={extractSection(rawText, "summary")} speed={6} />
                       </div>
                     </div>
-                    <div style={{ padding: 16, borderRadius: 8, background: "#08111c", border: "1px solid #0f2035" }}>
-                      <div style={{ fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em", marginBottom: 10 }}>ISSUES & RECOMMENDATIONS</div>
-                      <pre style={{ fontSize: 12, color: "#8899aa", lineHeight: 1.8, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ padding: 16, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                      <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: "0.15em", marginBottom: 10, fontWeight: 600 }}>ISSUES & RECOMMENDATIONS</div>
+                      <pre style={{ fontSize: 12, color: "#475569", lineHeight: 1.8, fontFamily: "'JetBrains Mono', monospace" }}>
                         {extractSection(rawText, "issues") || "No specific issues section found. See raw output."}
                       </pre>
                     </div>
@@ -990,25 +949,25 @@ ${code}
                 )}
 
                 {activeTab === "fixed" && (
-                  <div style={{ borderRadius: 8, overflow: "hidden", border: "1px solid #0f2035" }}>
+                  <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                     <div style={{
-                      padding: "10px 16px", background: "#08111c",
-                      borderBottom: "1px solid #0f2035",
+                      padding: "10px 16px", background: "#f8fafc",
+                      borderBottom: "1px solid #e2e8f0",
                       display: "flex", alignItems: "center", gap: 8
                     }}>
-                      <span style={{ fontSize: 11, color: "#2ecc71", letterSpacing: "0.1em" }}>✓ IMPROVED CODE</span>
-                      <span style={{ fontSize: 10, color: "#3a5a7a", marginLeft: "auto" }}>{language}</span>
+                      <span style={{ fontSize: 11, color: "#16a34a", letterSpacing: "0.1em", fontWeight: 600 }}>✓ IMPROVED CODE</span>
+                      <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: "auto" }}>{language}</span>
                       <button
                         onClick={() => navigator.clipboard.writeText(extractSection(rawText, "fixed"))}
                         style={{
                           padding: "2px 10px", borderRadius: 4, fontSize: 10,
-                          background: "#0d2236", border: "1px solid #1e3a5f",
-                          color: "#6a9ab0", cursor: "pointer"
+                          background: "#fff", border: "1px solid #e2e8f0",
+                          color: "#64748b", cursor: "pointer"
                         }}>COPY</button>
                     </div>
                     <pre style={{
-                      padding: 20, background: "#07101a",
-                      fontSize: 12.5, color: "#a8c8e8", lineHeight: "21px",
+                      padding: 20, background: "#fff",
+                      fontSize: 12.5, color: "#334155", lineHeight: "21px",
                       fontFamily: "'JetBrains Mono', monospace", overflowX: "auto"
                     }}>
                       {extractSection(rawText, "fixed") || "No fixed code found. See raw output."}
@@ -1018,10 +977,11 @@ ${code}
 
                 {activeTab === "raw" && (
                   <pre style={{
-                    fontSize: 12, color: "#6a8a9a", lineHeight: 1.8,
+                    fontSize: 12, color: "#64748b", lineHeight: 1.8,
                     fontFamily: "'JetBrains Mono', monospace",
-                    background: "#07101a", padding: 20, borderRadius: 8,
-                    border: "1px solid #0f2035", overflowX: "auto"
+                    background: "#fff", padding: 20, borderRadius: 10,
+                    border: "1px solid #e2e8f0", overflowX: "auto",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
                   }}>
                     {rawText}
                   </pre>
@@ -1035,39 +995,39 @@ ${code}
         {showHistory && (
           <div style={{
             width: isMobile ? "100%" : 240,
-            borderLeft: isMobile ? "none" : "1px solid #0f2035",
-            borderTop: isMobile ? "1px solid #0f2035" : "none",
-            background: "#07101a", overflow: "auto",
+            borderLeft: isMobile ? "none" : "1px solid #e2e8f0",
+            borderTop: isMobile ? "1px solid #e2e8f0" : "none",
+            background: "#fff", overflow: "auto",
             display: "flex", flexDirection: "column",
             maxHeight: isMobile ? 300 : "none"
           }}>
             <div style={{
-              padding: "12px 16px", borderBottom: "1px solid #0f2035",
-              fontSize: 10, color: "#3a5a7a", letterSpacing: "0.15em",
+              padding: "12px 16px", borderBottom: "1px solid #f1f5f9",
+              fontSize: 10, color: "#94a3b8", letterSpacing: "0.15em", fontWeight: 600,
               display: "flex", justifyContent: "space-between", alignItems: "center"
             }}>
               REVIEW HISTORY
-              {user && <span style={{ fontSize: 9, color: "#2ecc71" }}>● SAVED</span>}
+              {user && <span style={{ fontSize: 9, color: "#16a34a" }}>● SAVED</span>}
             </div>
             {history.length === 0 ? (
-              <div style={{ padding: 16, fontSize: 11, color: "#1e3a5f", textAlign: "center", marginTop: 20 }}>
+              <div style={{ padding: 16, fontSize: 11, color: "#cbd5e1", textAlign: "center", marginTop: 20 }}>
                 No history yet
               </div>
             ) : history.map(h => (
               <div key={h.id} className="history-item" style={{
-                padding: "12px 16px", borderBottom: "1px solid #0a1a28", background: "#07101a"
+                padding: "12px 16px", borderBottom: "1px solid #f1f5f9", background: "#fff"
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: "#00c8ff" }}>{h.language}</span>
-                  <span style={{ fontSize: 10, color: "#2a4a6a" }}>{h.time}</span>
+                  <span style={{ fontSize: 11, color: "#2563eb", fontWeight: 600 }}>{h.language}</span>
+                  <span style={{ fontSize: 10, color: "#cbd5e1" }}>{h.time}</span>
                 </div>
-                <div style={{ fontSize: 10, color: "#3a5a7a", marginBottom: 8 }}>{h.reviewType.toUpperCase()}</div>
+                <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 8 }}>{h.reviewType.toUpperCase()}</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {Object.entries(h.scores).map(([k, v]) => (
                     <span key={k} style={{
                       fontSize: 9, padding: "1px 6px", borderRadius: 3,
-                      background: "#0a1a28", border: `1px solid ${scoreColor(v)}`,
-                      color: scoreColor(v)
+                      background: "#f8fafc", border: `1px solid ${scoreColor(v)}`,
+                      color: scoreColor(v), fontWeight: 600
                     }}>{v ?? "N/A"}</span>
                   ))}
                 </div>
